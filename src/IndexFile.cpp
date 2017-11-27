@@ -7,9 +7,34 @@
 //============================================================================
 
 #include <iostream>
+#include "TreeNode.h"
+#include "BTree.h"
+
 using namespace std;
 
+
+/*TODO:
+ *
+ * - splitting and compensating
+ * - file backend with buffers (FileManager)
+ * - interface
+ *
+ */
 int main() {
-	cout << "!!!Hello World!!!" << endl; // prints !!!Hello World!!!
+
+	BTree B(3);
+
+	Record r1(1,1,1);
+	Record r2(2,1,2);
+	Record r3(1,1,3);
+	Record r4(1,1,4);
+
+	B.insert(r1);
+	B.insert(r2);
+	B.insert(r3);
+	B.insert(r4);
+
+	B.print();
+
 	return 0;
 }
