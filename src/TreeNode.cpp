@@ -28,9 +28,6 @@ list<NodeElement> TreeNode::getElements() {
 	return m_elements;
 }
 
-bool comparisonNode(const NodeElement e1, const NodeElement e2){
-	if
-}
 
 void TreeNode::insert(Record record) {
 	NodeElement empty(0);
@@ -50,6 +47,30 @@ void TreeNode::insert(Record record) {
 	m_elements.push_back(empty);
 
 	/* Sort the contents */
-	m_elements.sort();
+	sort();
 
+}
+
+/* TODO: fix performance, change sorting algorithm */
+void TreeNode::sort() {
+	/* Bubble sort omitting node pointers */
+
+	if (m_elements.size() == 0 || m_elements.size() == 3){
+		return;
+	}
+
+	list<NodeElement>::iterator current = m_elements.begin();
+	current++;
+
+	list<NodeElement>::iterator next = m_elements.begin();
+	advance(next, 3);
+
+
+	for (int i = 0; i < m_elements.size(); i++){
+		for (int j = 0; j < m_elements.size(); j++){
+			if ((*current).getKey() > next...)
+				swap
+		}
+		//reset iterators
+	}
 }

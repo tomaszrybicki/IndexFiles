@@ -28,6 +28,9 @@ public:
 	/* Inserts record into index file and record file */
 	void insert(Record record);
 
+private:
+	/* Sorts the node's element by key */
+	void sort();
 
 private:
 	list<NodeElement> m_elements;
