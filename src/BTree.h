@@ -18,14 +18,13 @@ public:
 	BTree(int degree);
 	virtual ~BTree();
 
+	/* Splits given node into two nodes, and reorganizes tree */
+	void split(TreeNode* node);
+
 	/* Inserts a record into data file and index file */
 	void insert(Record record);
 
 	void print();
-
-//	getByKey();
-//	findByKey();
-//	remove();
 
 private:
 	/* Returns a node to which a key should be inserted */

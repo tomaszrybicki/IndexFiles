@@ -2,7 +2,7 @@
  * TreeNode.cpp
  *
  *  Created on: Nov 26, 2017
- *      Author: lebowski
+ *  Author: Tomasz Rybicki
  */
 
 #include "TreeNode.h"
@@ -50,7 +50,6 @@ void TreeNode::insert(Record record) {
 	sort();
 
 }
-
 /* TODO: fix performance, change sorting algorithm */
 void TreeNode::sort() {
 	/* Bubble sort omitting node pointers */
@@ -66,11 +65,26 @@ void TreeNode::sort() {
 	advance(next, 3);
 
 
-	for (int i = 0; i < m_elements.size(); i++){
-		for (int j = 0; j < m_elements.size(); j++){
-			if ((*current).getKey() > next...)
-				swap
+	for (unsigned int i = 0; i < m_elements.size(); i++){
+		for (unsigned int j = 0; j < m_elements.size(); j++){
+			if ((*current).getKey() > (*next).getKey()){
+				swap((*current), (*next));
+			}
+
+			/* Advance */
+			advance(current, 2);
+			advance(next, 2);
+
+			/* Bound check */
+			if (next == m_elements.end()){
+				break;
+			}
 		}
-		//reset iterators
+
+		current = m_elements.begin();
+		current++;
+
+		next = m_elements.begin();
+		advance(next, 3);
 	}
 }

@@ -25,11 +25,13 @@ public:
 
 	list<NodeElement> getElements();
 
-	/* Inserts record into index file and record file */
+	/* Inserts record into index file and record file
+	 * Node is automatically sorted */
 	void insert(Record record);
 
 private:
-	/* Sorts the node's element by key */
+	/* Sorts the node's element by key
+	 * Leaves node pointers in original place */
 	void sort();
 
 private:

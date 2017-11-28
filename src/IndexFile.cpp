@@ -24,10 +24,10 @@ int main() {
 
 	BTree B(3);
 
-	Record r1(1,1,1);
+	Record r1(1,1,5);
 	Record r2(2,1,2);
-	Record r3(1,1,3);
-	Record r4(1,1,4);
+	Record r3(1,1,41);
+	Record r4(1,1,5);
 
 	B.insert(r1);
 	B.insert(r2);
