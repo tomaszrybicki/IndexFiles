@@ -8,7 +8,8 @@
 #include "TreeNode.h"
 
 TreeNode::TreeNode()
-	: m_elements()
+	: m_treeRecords()
+	, m_nodePointers()
 	, m_parentPosition(0)
 {
 
@@ -18,73 +19,48 @@ TreeNode::~TreeNode() {
 }
 
 void TreeNode::print() {
-	for (auto i : m_elements){
-		cout << "Node location: " << i.getNode() << " Key: " << i.getKey() << endl;
+	cout << "Node position: " << m_position << " Parent: " << m_parentPosition << endl;
+	cout << '[';
+
+	bool first = true;
+	for (auto it : m_treeRecords){
+		if (first){
+			cout << "-|";
+			first = false;
+		}else{
+			cout << "|-|";
+		}
+		cout << it.key;
 	}
+	cout << "|-]" << endl;
 };
 
-
-list<NodeElement> TreeNode::getElements() {
-	return m_elements;
+static bool comp(const treeRecord &a, const treeRecord &b)
+{
+	return a.key < b.key;
 }
-
 
 void TreeNode::insert(Record record) {
-	NodeElement empty(0);
+	//register new record
+	//update position
+	treeRecord tr = {record.getID(), 0 };
 
-	/* If Node is empty, first add empty node pointer */
-	if(m_elements.empty()){
-		m_elements.push_back(empty);
-	}
-
-	/* Our record's index to be put in BTree */
-	NodeElement index(0, record.getID());
-	//register data
-
-	m_elements.push_back(index);
-
-	/* Add empty node pointer add the end */
-	m_elements.push_back(empty);
+	m_treeRecords.push_back(tr);
 
 	/* Sort the contents */
-	sort();
+	m_treeRecords.sort(comp);
 
 }
-/* TODO: fix performance, change sorting algorithm */
-void TreeNode::sort() {
-	/* Bubble sort omitting node pointers */
-
-	if (m_elements.size() == 0 || m_elements.size() == 3){
-		return;
-	}
-
-	list<NodeElement>::iterator current = m_elements.begin();
-	current++;
-
-	list<NodeElement>::iterator next = m_elements.begin();
-	advance(next, 3);
 
 
-	for (unsigned int i = 0; i < m_elements.size(); i++){
-		for (unsigned int j = 0; j < m_elements.size(); j++){
-			if ((*current).getKey() > (*next).getKey()){
-				swap((*current), (*next));
-			}
+int TreeNode::countRecords() {
+	return m_treeRecords.size();
+}
 
-			/* Advance */
-			advance(current, 2);
-			advance(next, 2);
+list<position_t> TreeNode::getPointers() {
+	return m_nodePointers;
+}
 
-			/* Bound check */
-			if (next == m_elements.end()){
-				break;
-			}
-		}
-
-		current = m_elements.begin();
-		current++;
-
-		next = m_elements.begin();
-		advance(next, 3);
-	}
+list<treeRecord> TreeNode::getTreeRecords() {
+	return m_treeRecords;
 }

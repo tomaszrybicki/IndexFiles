@@ -9,6 +9,7 @@
 #define RECORD_H_
 
 #include <math.h>
+#include "Defines.h"
 
 /*
  * Class describing a record in database file
@@ -16,6 +17,7 @@
  */
 class Record {
 public:
+	friend class MemoryManager;
 	Record(double h, double r, unsigned long long id);
 	virtual ~Record();
 	double getVolume();
@@ -32,14 +34,14 @@ public:
 		return m_radius;
 	}
 
-	unsigned long long getID(){
+	rKey_t getID(){
 		return m_id;
 	}
 
 private:
 	double m_height;
 	double m_radius;
-	unsigned long long m_id;
+	rKey_t m_id;
 };
 
 #endif /* RECORD_H_ */

@@ -9,32 +9,33 @@
 #include <iostream>
 #include "TreeNode.h"
 #include "BTree.h"
+#include "MemoryManager.h"
 
 using namespace std;
 
 
 /*TODO:
- *
+ * - fisnish backend for records
+ * - backend memory mangagment (deallocate old nodes when allocating new ones
  * - splitting and compensating
- * - file backend with buffers (FileManager)
  * - interface
  *
  */
 int main() {
 
-	BTree B(3);
+	MemoryManager M(30);
 
-	Record r1(1,1,5);
-	Record r2(2,1,2);
-	Record r3(1,1,41);
-	Record r4(1,1,5);
+	TreeNode* A = new TreeNode;
+	Record r1(1, 1, 10);
+	Record r2(1, 1, 2);
+	A->insert(r1);
+	A->insert(r2);
+	A->print();
 
-	B.insert(r1);
-	B.insert(r2);
-	B.insert(r3);
-	B.insert(r4);
+	M.deallocateNode(A);
+	A = M.getNode(0);
+	A->print();
 
-	B.print();
 
 	return 0;
 }

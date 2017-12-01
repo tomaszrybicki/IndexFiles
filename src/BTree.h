@@ -24,6 +24,9 @@ public:
 	/* Inserts a record into data file and index file */
 	void insert(Record record);
 
+	/* Attempts compensation, returns true if possible */
+	bool compensate(unsigned long long node);
+
 	void print();
 
 private:
@@ -35,7 +38,7 @@ private:
 	int m_degree;
 
 	/* The root node of the tree */
-	TreeNode* m_root;
+	position_t m_root;
 };
 
 #endif /* BTREE_H_ */
