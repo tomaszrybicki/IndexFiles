@@ -38,6 +38,18 @@ public:
 		return m_id;
 	}
 
+	void setId(rKey_t id) {
+		m_id = id;
+	}
+
+	void setHeight(double height) {
+		m_height = height;
+	}
+
+	void setRadius(double radius) {
+		m_radius = radius;
+	}
+
 private:
 	double m_height;
 	double m_radius;

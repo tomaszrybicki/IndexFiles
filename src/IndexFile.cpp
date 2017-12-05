@@ -15,26 +15,38 @@ using namespace std;
 
 
 /*TODO:
+ * - load previous database state (position of free block)
  * - fisnish backend for records
  * - backend memory mangagment (deallocate old nodes when allocating new ones
  * - splitting and compensating
  * - interface
  *
+ *	- crashes because m_freeBlock is not saved inbetween running app!!!!!!!!!!!!
+ *
  */
 int main() {
 
-	MemoryManager M(30);
+	{
+	MemoryManager M(3);
 
-	TreeNode* A = new TreeNode;
-	Record r1(1, 1, 10);
-	Record r2(1, 1, 2);
-	A->insert(r1);
-	A->insert(r2);
-	A->print();
+	Record* rPtr1;
+	rPtr1 = M.newRecord();
+	rPtr1->setId(2);
+	rPtr1->setHeight(2);
+	rPtr1->setRadius(2);
 
-	M.deallocateNode(A);
-	A = M.getNode(0);
-	A->print();
+	Record* rPtr2;
+	rPtr2 = M.newRecord();
+	rPtr2->setId(1);
+
+	}
+	MemoryManager M(3);
+	M.getRecord(0, 2);
+	M.getRecord(0, 1);
+
+	M.printRecords();
+
+
 
 
 	return 0;

@@ -15,8 +15,8 @@ typedef struct {
 #define WRONG_ELEMENT 0
 
 #define MAX_BUFFERED_HEIGHT 5
-#define RECORDS_PER_PAGE 4
-#define RECORD_PAGE_SIZE ((sizeof(Record) * RECORDS_PER_PAGE) + 1)
+#define RECORDS_PER_PAGE 2
+#define RECORD_PAGE_SIZE (((sizeof(rKey_t) + sizeof(double) + sizeof(double)) * RECORDS_PER_PAGE) + 1)
 
 #define KiB 1024
 

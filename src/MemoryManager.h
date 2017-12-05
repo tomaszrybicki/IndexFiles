@@ -43,25 +43,29 @@ public:
 	 * loads it into memory and returns it's address */
 	TreeNode* newNode();
 
-	/* Saves all allocated nodes to file */
-	void syncNodes();
-
 
 	/* Creates a new record in file, loads it into memory
-	 * and returns the pointer */
+	 * and returns the pointer
+	 * Caller has to set id for the record before it's deallocated */
 	Record* newRecord();
 
+	/* Updates file to memory contents */
+	void syncRecords();
+
 	/* Loads the block position into memory
-	 * and returns the pointer */
+	 * and returns the pointer or NULL if doesn't exist */
 	Record* getRecord(position_t position, rKey_t key);
 
-	/* Loads given block of given position into memory */
+	/* Loads into memory block with given position,
+	 * position must be a valid position of block */
 	void getBlock(position_t position);
 
-	//deaalocate - set header!
+	/* Saves block to file and frees memory */
+	void deallocateBlock(position_t position);
 
-
-
+	/* Prints contents of record file as well as
+	 * contents of page buffers */
+	void printRecords();
 
 private:
 	/* File holding all the trees nodes */
