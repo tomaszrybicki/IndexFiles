@@ -15,39 +15,37 @@ using namespace std;
 
 
 /*TODO:
- * - load previous database state (position of free block)
- * - fisnish backend for records
- * - backend memory mangagment (deallocate old nodes when allocating new ones
  * - splitting and compensating
  * - interface
- *
+ * - create private functions
  *	- crashes because m_freeBlock is not saved inbetween running app!!!!!!!!!!!!
+ *
+ *
+ *	shoulb be done: redundant new node file writes :// (intead of wrtiting zeros just assign position, and update global position)
+ *	Fancy:
+ *	bit if block was used - only then write it to file when deallocating
  *
  */
 int main() {
 
 	{
-	MemoryManager M(3);
-
+	MemoryManager M(3,1);
 	Record* rPtr1;
-	rPtr1 = M.newRecord();
-	rPtr1->setId(2);
-	rPtr1->setHeight(2);
-	rPtr1->setRadius(2);
 
-	Record* rPtr2;
-	rPtr2 = M.newRecord();
-	rPtr2->setId(1);
-
+	for (int i =1; i < 6; i++){
+		rPtr1 = M.newRecord();
+		rPtr1->setId(i);
 	}
-	MemoryManager M(3);
-	M.getRecord(0, 2);
-	M.getRecord(0, 1);
 
 	M.printRecords();
+	}
 
-
-
+	MemoryManager M(3,1);
+	M.getRecord(0, 1);
+	M.deleteRecord(0,1);
+	Record* r = M.newRecord();
+	r->setId(15);
+	M.printRecords();
 
 	return 0;
 }

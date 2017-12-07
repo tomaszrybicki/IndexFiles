@@ -5,11 +5,13 @@
 
 typedef std::streampos position_t;
 typedef unsigned long long rKey_t;
+typedef unsigned long long sequenceID;
 
-typedef struct {
+typedef struct{
 	rKey_t key;
 	position_t position;
 }treeRecord;
+
 
 #define NO_CHILDREN 0
 #define WRONG_ELEMENT 0
@@ -17,6 +19,7 @@ typedef struct {
 #define MAX_BUFFERED_HEIGHT 5
 #define RECORDS_PER_PAGE 2
 #define RECORD_PAGE_SIZE (((sizeof(rKey_t) + sizeof(double) + sizeof(double)) * RECORDS_PER_PAGE) + 1)
+#define STATE_FILE_NAME "State.bin"
 
 #define KiB 1024
 

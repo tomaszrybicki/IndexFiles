@@ -22,12 +22,17 @@ using namespace std;
  * If request is made for a Node or a Record
  * the manager returns it's memory address.
  * If it wasn't in memory already, it is loaded
+ * along with its whole page(block)
+ *
+ * Each map of allocated nodes/pages has
+ * a complementary map of sequence id of each element
+ * (incremented globally with each call to element)
  *
  * Node entries in file are fixed width
  */
 class MemoryManager {
 public:
-	MemoryManager(int degree);
+	MemoryManager(int degree, int limit);
 	virtual ~MemoryManager();
 
 	/* Returns pointer to allocated node */
@@ -67,6 +72,27 @@ public:
 	 * contents of page buffers */
 	void printRecords();
 
+	/* Save object state such as pointer to free block */
+	void saveState();
+
+	/* Load state from previous application run */
+	void loadState();
+
+	/* Deletes record from page */
+	void deleteRecord(position_t position, rKey_t key);
+
+	/* Updates statistics about Node usage, increments globalSid */
+	void updateNodeStats(position_t position);
+
+	/* Updates statistics about page usage, increments globalSid */
+	void updatePageStats(position_t position);
+
+	/* Checks if there isnt too many nodes or records in memory and
+	 * removes the ones last used from memory if needed
+	 */
+	void maintance();
+
+
 private:
 	/* File holding all the trees nodes */
 	string m_nodesFile;
@@ -83,12 +109,29 @@ private:
 	/* Map of nodes loaded in memory */
 	map<position_t, TreeNode*> m_allocatedNodes;
 
+	/* Map of sequence ids of nodes loaded in memory */
+	map<position_t, sequenceID> m_allocatedNodesSid;
+
+
 	/* Map of record pages loaded in memory */
 	map<position_t, list<Record*>> m_allocatedRecords;
+
+	/* Map of record pages loaded in memory sequence ids*/
+	map<position_t, sequenceID> m_allocatedRecordsSid;
 
 	/* Position of not full block */
 	position_t m_freeBlock;
 
+	/* Number of pages or nodes which can be held in memory */
+	int m_memoryLimit;
+
+	/* Number of pages held in memory */
+	int m_pagesInMemory;
+
+	/* Number of pages held in memory */
+	int m_nodesInMemory;
+
+	sequenceID m_globalSid;
 };
 
 #endif /* SRC_MEMORYMANAGER_H_ */
