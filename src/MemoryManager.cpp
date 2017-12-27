@@ -539,12 +539,15 @@ void MemoryManager::updatePageStats(position_t position) {
 
 void MemoryManager::maintance() {
 	position_t toDeallocate = 0;
-	sequenceID min = ~0;
+	sequenceID_t min = ~0;
 
+	/* TODO: make m_memoryLimit -1) ? */
 	if (m_pagesInMemory > m_memoryLimit){
 
 		/* Look for least recently used page */
 		for (auto page : m_allocatedRecordsSid){
+
+			/* Smallest sequence id = least recently used */
 			if (page.second < min){
 				min = page.second;
 				toDeallocate = page.first;
