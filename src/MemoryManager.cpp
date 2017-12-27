@@ -13,7 +13,7 @@
  * many Records are stored in one page
  * page consists of (Header 1B - full or not)(Record (key, height, radius))(Record...
  * the basic version assumes appening records to file one after another
- * the page to write is a member, when its full next page is created
+ * the page to write is a member, when it's full next page is created
  */
 
 MemoryManager::MemoryManager(int degree, int limit)
@@ -537,12 +537,15 @@ void MemoryManager::updatePageStats(position_t position) {
 
 void MemoryManager::maintance() {
 	position_t toDeallocate = 0;
-	sequenceID min = ~0;
+	sequenceID_t min = ~0;
 
+	/* TODO: make m_memoryLimit -1) ? */
 	if (m_pagesInMemory > m_memoryLimit){
 
 		/* Look for least recently used page */
 		for (auto page : m_allocatedRecordsSid){
+
+			/* Smallest sequence id = least recently used */
 			if (page.second < min){
 				min = page.second;
 				toDeallocate = page.first;

@@ -51,7 +51,7 @@ public:
 
 	/* Creates a new record in file, loads it into memory
 	 * and returns the pointer
-	 * Caller has to set id for the record before it's deallocated */
+	 * caller has to set id for the record before it's deallocated */
 	Record* newRecord();
 
 	/* Updates file to memory contents */
@@ -72,7 +72,7 @@ public:
 	 * contents of page buffers */
 	void printRecords();
 
-	/* Save object state such as pointer to free block */
+	/* Save object (databases) state such as pointer to free block */
 	void saveState();
 
 	/* Load state from previous application run */
@@ -110,14 +110,13 @@ private:
 	map<position_t, TreeNode*> m_allocatedNodes;
 
 	/* Map of sequence ids of nodes loaded in memory */
-	map<position_t, sequenceID> m_allocatedNodesSid;
-
+	map<position_t, sequenceID_t> m_allocatedNodesSid;
 
 	/* Map of record pages loaded in memory */
 	map<position_t, list<Record*>> m_allocatedRecords;
 
 	/* Map of record pages loaded in memory sequence ids*/
-	map<position_t, sequenceID> m_allocatedRecordsSid;
+	map<position_t, sequenceID_t> m_allocatedRecordsSid;
 
 	/* Position of not full block */
 	position_t m_freeBlock;
@@ -128,10 +127,10 @@ private:
 	/* Number of pages held in memory */
 	int m_pagesInMemory;
 
-	/* Number of pages held in memory */
+	/* Number of trees nodes held in memory */
 	int m_nodesInMemory;
 
-	sequenceID m_globalSid;
+	sequenceID_t m_globalSid;
 };
 
 #endif /* SRC_MEMORYMANAGER_H_ */

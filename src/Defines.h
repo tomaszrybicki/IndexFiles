@@ -5,7 +5,7 @@
 
 typedef std::streampos position_t;
 typedef unsigned long long rKey_t;
-typedef unsigned long long sequenceID;
+typedef unsigned long long sequenceID_t;
 
 typedef struct{
 	rKey_t key;
