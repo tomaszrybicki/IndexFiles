@@ -40,11 +40,8 @@ static bool comp(const treeRecord &a, const treeRecord &b)
 	return a.key < b.key;
 }
 
-void TreeNode::insert(Record record) {
-	//register new record
-	//update position
-	treeRecord tr = {record.getID(), 0 };
-
+void TreeNode::insert(Record record, position_t position) {
+	treeRecord tr = {record.getID(), position };
 	m_treeRecords.push_back(tr);
 
 	/* Sort the contents */

@@ -48,11 +48,10 @@ public:
 	 * loads it into memory and returns it's address */
 	TreeNode* newNode();
 
-
 	/* Creates a new record in file, loads it into memory
-	 * and returns the pointer
+	 * and returns the pointer, position is filled with record position
 	 * Caller has to set id for the record before it's deallocated */
-	Record* newRecord();
+	Record* newRecord(position_t* position);
 
 	/* Updates file to memory contents */
 	void syncRecords();

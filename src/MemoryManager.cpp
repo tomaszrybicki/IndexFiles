@@ -10,10 +10,10 @@
 /*
  * Nodes are saved as pages. every node is identified with its position in file
  *
- * many Records are stored in one page
+ * Many records are stored in one page
  * page consists of (Header 1B - full or not)(Record (key, height, radius))(Record...
  * the basic version assumes appening records to file one after another
- * the page to write is a member, when its full next page is created
+ * the position of page to write is a member, when its full next page is created
  */
 
 MemoryManager::MemoryManager(int degree, int limit)
@@ -270,7 +270,7 @@ void MemoryManager::updateNode(TreeNode* node) {
 }
 
 
-Record* MemoryManager::newRecord() {
+Record* MemoryManager::newRecord(position_t* position) {
 	/* Allocate record */
 	Record* record = new Record(0,0,0);
 
@@ -279,6 +279,8 @@ Record* MemoryManager::newRecord() {
 
 	/* Add record to page */
 	m_allocatedRecords[m_freeBlock].push_back(record);
+	position = m_freeBlock;
+
 	updatePageStats(m_freeBlock);
 
 	/* If we have filled the page - update free page pointer */

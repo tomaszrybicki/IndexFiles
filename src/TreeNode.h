@@ -31,7 +31,7 @@ public:
 
 	/* Inserts record into index file and record file
 	 * Node is then sorted */
-	void insert(Record record);
+	void insert(Record record, position_t position);
 
 	/* Returns the number of stored records in the node */
 	int countRecords();

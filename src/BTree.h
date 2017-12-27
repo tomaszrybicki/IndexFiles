@@ -10,6 +10,7 @@
 
 #include "TreeNode.h"
 #include "Record.h"
+#include "MemoryManager.h"
 
 
 
@@ -30,8 +31,9 @@ public:
 	void print();
 
 private:
-	/* Returns a node to which a key should be inserted */
-	TreeNode* findLeafNodeForKey(unsigned long long key);
+	/* Returns a node which contains or to which
+	 *  a key should be inserted */
+	position_t findLeafNodeForKey(unsigned long long key);
 
 private:
 	/* The degree of B-tree */
@@ -39,6 +41,9 @@ private:
 
 	/* The root node of the tree */
 	position_t m_root;
+
+	/* The manager responsible for file access layer */
+	MemoryManager m_manager;
 };
 
 #endif /* BTREE_H_ */

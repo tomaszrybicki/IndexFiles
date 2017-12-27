@@ -17,13 +17,11 @@ using namespace std;
 /*TODO:
  * - splitting and compensating
  * - interface
- * - create private functions
- *	- crashes because m_freeBlock is not saved inbetween running app!!!!!!!!!!!!
+ * - create private functions for memory manager
  *
  *
  *	shoulb be done: redundant new node file writes :// (intead of wrtiting zeros just assign position, and update global position)
  *	Fancy:
- *	bit if block was used - only then write it to file when deallocating
  *
  */
 int main() {

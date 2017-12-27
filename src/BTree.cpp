@@ -22,7 +22,9 @@ void BTree::insert(Record record) {
 
 	/* Find a node which should hold value of our key */
 	TreeNode* node = findLeafNodeForKey(record.getID());
+	//call newNocde and copy values
 	node->insert(record);
+
 
 	/* Check if node isn't overfilled */
 //	if (node->countRecords() > m_degree){
@@ -54,7 +56,23 @@ bool BTree::compensate(unsigned long long node) {
 
 }
 
-TreeNode* BTree::findLeafNodeForKey(rKey_t key) {
+position_t BTree::findLeafNodeForKey(rKey_t key) {
+	TreeNode* root = m_manager.getNode(m_root);
+
+	/* Root node is empty */
+	if (!root->countRecords()){
+		return NULL;
+	}
+
+	/* Look for key in root */
+	for (auto record : root->getTreeRecords()){
+		if (record.key == key){
+			return m_root;
+		}
+	}
+
+	//jak na slajdach
+
 //	NodeElement* prevElement = NULL;
 //	TreeNode* currentNode = m_root;
 //
