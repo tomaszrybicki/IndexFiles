@@ -20,30 +20,78 @@ public:
 	virtual ~BTree();
 
 	/* Splits given node into two nodes, and reorganizes tree */
-	void split(TreeNode* node);
+	void split(position_t nodePos);
 
-	/* Inserts a record into data file and index file */
-	void insert(Record record);
+	/* Inserts a record into index file */
+	bool insert(Record record, position_t recordPos);
 
-	/* Attempts compensation, returns true if possible */
-	bool compensate(unsigned long long node);
+	bool insert(double h, double r, rKey_t key);
 
+	/* Attempts compensation, returns true if possible and done */
+	bool compensate(position_t node);
+
+	/* Removed record with key */
+	void removeRecord(rKey_t key);
+
+	/* Pass 0 as any argument except key to not change its value */
+	void updateRecord(rKey_t key, double h, double r, rKey_t newKey);
+
+	/* Prints Btree structure */
 	void print();
 
-private:
+	/* Prints contents of BTree in sorted order */
+	void printIndexes();
+
+	/* Prints all stored records */
+	void printRecords();
+
+	/* Returns position of record with given key */
+	position_t findKey(rKey_t key);
+
+	Record* getRecord(rKey_t key);
+
+	/* The manager responsible for file access layer */
+	static MemoryManager manager;
+
+	/* Saves position of root node */
+	void saveState();
+
+	void interface();
+
+	/* Test files are binary files where each operation is in following format:
+	 * Offset
+	 * 0x00 - type of operation (Update, Remove, Insert, Get, Print)
+	 * 0x01 - key of the record
+	 * 0x09 - new height (only for update and insert) - double format
+	 * 0x11 - new radius (only for update and insert) - double format
+	 * 0x19-0x20 - new key (only for update)
+	 *
+	 */
+	void runTestFile();
+
+	void createTestFile();
+
+
+
+//private:
 	/* Returns a node which contains or to which
 	 *  a key should be inserted */
 	position_t findLeafNodeForKey(unsigned long long key);
 
-private:
+	position_t findNodeWithKey(unsigned long long key);
+
+	void merge(position_t nodePos);
+
+	void findNeighbourNodes(position_t nodePos, position_t &left, position_t &right);
+
+
+//private:
 	/* The degree of B-tree */
 	int m_degree;
 
+
 	/* The root node of the tree */
 	position_t m_root;
-
-	/* The manager responsible for file access layer */
-	MemoryManager m_manager;
 };
 
 #endif /* BTREE_H_ */

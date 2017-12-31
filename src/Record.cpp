@@ -23,3 +23,10 @@ double Record::getVolume(){
 
 	return volume;
 }
+
+Record::Record()
+	: m_height(0)
+	, m_radius(0)
+	, m_id(0)
+{
+}

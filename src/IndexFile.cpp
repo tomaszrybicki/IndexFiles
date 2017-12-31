@@ -13,37 +13,31 @@
 
 using namespace std;
 
+extern uint64_t recordReads;
+extern uint64_t recordWrites;
+extern uint64_t indexReads;
+extern uint64_t indexWrites;
+
+
 
 /*TODO:
- * - splitting and compensating
  * - interface
  * - create private functions for memory manager
- *
- *
  *	shoulb be done: redundant new node file writes :// (intead of wrtiting zeros just assign position, and update global position)
- *	Fancy:
- *
  */
+
+
 int main() {
+	BTree b(DEGREE);
 
-	{
-	MemoryManager M(3,1);
-	Record* rPtr1;
 
-	for (int i =1; i < 6; i++){
-		rPtr1 = M.newRecord();
-		rPtr1->setId(i);
-	}
+	b.createTestFile();
+	b.runTestFile();
 
-	M.printRecords();
-	}
 
-	MemoryManager M(3,1);
-	M.getRecord(0, 1);
-	M.deleteRecord(0,1);
-	Record* r = M.newRecord();
-	r->setId(15);
-	M.printRecords();
+	b.saveState();
+	cout << "Record reads: " << recordReads << " Record writes: "<<recordWrites << endl;
+	cout << "Index reads: " << indexReads << " Index writes: "<<indexWrites << endl;
 
 	return 0;
 }

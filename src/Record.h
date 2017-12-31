@@ -18,6 +18,7 @@
 class Record {
 public:
 	friend class MemoryManager;
+	Record();
 	Record(double h, double r, unsigned long long id);
 	virtual ~Record();
 	double getVolume();
@@ -48,6 +49,11 @@ public:
 
 	void setRadius(double radius) {
 		m_radius = radius;
+	}
+
+
+	bool operator==(const Record& other) const {
+		return m_id == other.m_id;
 	}
 
 private:

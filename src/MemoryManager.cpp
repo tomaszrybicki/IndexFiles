@@ -7,6 +7,11 @@
 
 #include "MemoryManager.h"
 
+uint64_t recordReads;
+uint64_t recordWrites;
+uint64_t indexReads;
+uint64_t indexWrites;
+
 /*
  * Nodes are saved as pages. every node is identified with its position in file
  *
@@ -21,11 +26,14 @@ MemoryManager::MemoryManager(int degree, int limit)
 	, m_recordsFile("Records.bin")
 	, m_degree(degree)
 	, m_allocatedNodes()
+	, m_allocatedNodesCopy()
 	, m_allocatedRecords()
+	, m_allocatedRecordsCopy()
 	, m_memoryLimit(limit)
 	, m_pagesInMemory(0)
 	, m_nodesInMemory(0)
 	, m_globalSid(0)
+	, m_rootNodePosition(ERROR)
 {
 	/* 2 * degree records */
 	m_nodeEntrySize = (2 * m_degree) * sizeof(treeRecord);
@@ -60,6 +68,22 @@ MemoryManager::MemoryManager(int degree, int limit)
 	loadState();
 }
 
+void MemoryManager::updatePathToRoot(position_t nodePos) {
+	if (nodePos == ERROR){
+		return;
+	}
+
+	TreeNode* node = getNode(nodePos);
+	position_t parent = node->m_parentPosition;
+
+	while (parent != ERROR){
+		node = getNode(parent);
+		parent = node->m_parentPosition;
+	}
+
+	return;
+}
+
 MemoryManager::~MemoryManager() {
 	for (auto it = m_allocatedRecords.begin(); it != m_allocatedRecords.end();){
 		deallocateBlock(it->first);
@@ -67,6 +91,17 @@ MemoryManager::~MemoryManager() {
 	}
 
 	m_allocatedRecords.clear();
+	m_allocatedRecordsCopy.clear();
+
+
+	for (auto it = m_allocatedNodes.begin(); it != m_allocatedNodes.end();){
+		deallocateNode(it->second);
+		it++;
+	}
+
+	m_allocatedNodes.clear();
+	m_allocatedNodesCopy.clear();
+
 	saveState();
 }
 
@@ -91,6 +126,7 @@ TreeNode* MemoryManager::getNode(position_t nodePosition) {
 	}
 
 	m_nodesInMemory++;
+	indexReads++;
 
 	/* Find nodes position in file */
 	file.seekg(nodePosition);
@@ -125,15 +161,12 @@ TreeNode* MemoryManager::getNode(position_t nodePosition) {
 	bytes = bytesStart + sizeof(position_t) + ((2 * m_degree) * (sizeof(position_t) + sizeof (rKey_t)));
 	position_t pos;
 
-	for (int i = 0; i < (2 * m_degree); i++){
+	for (int i = 0; i < (2 * m_degree + 1); i++){
 		pos = *((position_t*)bytes);
 		bytes += sizeof(position_t);
 
-		if(tr.key == 0 || tr.position == 0){
-			break;
-		}
-
-		node->m_nodePointers.push_back(pos);
+		if(pos)
+			node->m_nodePointers.push_back(pos);
 	}
 
 	delete[] bytesStart;
@@ -141,6 +174,7 @@ TreeNode* MemoryManager::getNode(position_t nodePosition) {
 
 	/* Update allocation map */
 	m_allocatedNodes[node->m_position] = node;
+	m_allocatedNodesCopy[node->m_position] = *node;
 
 	maintance();
 
@@ -148,47 +182,56 @@ TreeNode* MemoryManager::getNode(position_t nodePosition) {
 }
 
 void MemoryManager::deallocateNode(TreeNode* node) {
-	ofstream file(m_nodesFile, ios::out|ios::binary);
 
-	/* File cannot be opened */
-	if (!file.good()){
-		cerr << "File cannot be opened: " << m_nodesFile << endl;
-		return;
+	/* If node was changed */
+	if (!(m_allocatedNodesCopy[node->m_position] == (*node))){
+
+		ofstream file(m_nodesFile, ios::out|ios::binary|ios::in);
+
+		/* File cannot be opened */
+		if (!file.good()){
+			cerr << "File cannot be opened: " << m_nodesFile << endl;
+			return;
+		}
+
+		indexWrites++;
+
+		/* Find nodes position in file */
+		file.seekp(node->getPosition());
+
+		/* Write node to file */
+		char* bytesStart = new char[m_nodeEntrySize]();
+		char* bytes = bytesStart;
+
+		/* Write parent position */
+		position_t parent = node->getParentPosition();
+		*((position_t*)bytes) = parent;
+		bytes += sizeof(position_t);
+
+		for (auto it : node->getTreeRecords()){
+			*((rKey_t*)bytes) = it.key;
+			bytes += sizeof(rKey_t);
+
+			*((position_t*)bytes) = it.position;
+			bytes += sizeof(position_t);
+		}
+
+		/* Leave zeros if node is not full - move to node pointers part */
+		bytes = bytesStart + sizeof(position_t) + ((2 * m_degree) * (sizeof(position_t) + sizeof (rKey_t)));
+
+		for (auto it : node->getPointers()){
+				*((position_t*)bytes) = it;
+				bytes += sizeof(position_t);
+		}
+
+		file.write(bytesStart, m_nodeEntrySize);
+
+		file.close();
+		delete[] bytesStart;
 	}
 
 	m_nodesInMemory--;
 
-	/* Find nodes position in file */
-	file.seekp(node->getPosition());
-
-	/* Write node to file */
-	char* bytesStart = new char[m_nodeEntrySize]();
-	char* bytes = bytesStart;
-
-	position_t parent = node->getParentPosition();
-	*((position_t*)bytes) = parent;
-	bytes += sizeof(position_t);
-
-	for (auto it : node->getTreeRecords()){
-		*((rKey_t*)bytes) = it.key;
-		bytes += sizeof(rKey_t);
-
-		*((position_t*)bytes) = it.position;
-		bytes += sizeof(position_t);
-	}
-
-	/* Leave zeros if node is not full - move to node pointers part */
-	bytes = bytesStart + sizeof(position_t) + ((2 * m_degree) * (sizeof(position_t) + sizeof (rKey_t)));
-
-	for (auto it : node->getPointers()){
-			*((position_t*)bytes) = it;
-			bytes += sizeof(position_t);
-	}
-
-	file.write(bytesStart, m_nodeEntrySize);
-
-	file.close();
-	delete[] bytesStart;
 
 	/* Update allocation map */
 	map<position_t, TreeNode*>::iterator it;
@@ -196,6 +239,8 @@ void MemoryManager::deallocateNode(TreeNode* node) {
 	if(it != m_allocatedNodes.end()){
 		m_allocatedNodes.erase(it);
 	}
+
+	m_allocatedNodesCopy.erase(node->m_position);
 
 	/* Update SIDs map */
 	m_allocatedNodesSid.erase(node->m_position);
@@ -213,18 +258,22 @@ TreeNode* MemoryManager::newNode() {
 		return 0;
 	}
 
+	indexWrites++;
+
 	/* Save current position as node identificator */
 	position_t pos = file.tellp();
 
 	/* Zero out the new node in file */
 	char* zero = new char[m_nodeEntrySize]();
 
-	file.write(zero, sizeof(m_nodeEntrySize));
+	file.write(zero, m_nodeEntrySize);
 
 	file.close();
 	delete[] zero;
 
-	return getNode(pos);
+	TreeNode* node = getNode(pos);
+	node->m_parentPosition = ERROR;
+	return node;
 }
 
 void MemoryManager::updateNode(TreeNode* node) {
@@ -235,6 +284,8 @@ void MemoryManager::updateNode(TreeNode* node) {
 		cerr << "File cannot be opened: " << m_nodesFile << endl;
 		return;
 	}
+
+	indexWrites++;
 
 	/* Find nodes position in file */
 	file.seekp(node->getPosition());
@@ -279,7 +330,9 @@ Record* MemoryManager::newRecord(position_t* position) {
 
 	/* Add record to page */
 	m_allocatedRecords[m_freeBlock].push_back(record);
-	position = m_freeBlock;
+	m_allocatedRecordsCopy[m_freeBlock].push_back(*record);
+
+	(*position) = m_freeBlock;
 
 	updatePageStats(m_freeBlock);
 
@@ -317,12 +370,14 @@ void MemoryManager::syncRecords() {
 		return;
 	}
 
+	recordWrites++;
+
 	/* Buffer for page */
-	char* bytesStart = new char[RECORD_PAGE_SIZE]();
+	char bytesStart[RECORD_PAGE_SIZE] = {};
 	char* bytes = bytesStart;
 
 	/* Update each page */
-	for (auto page : m_allocatedRecords){
+	for (auto const &page : m_allocatedRecords){
 		bytes = bytesStart;
 
 		/* Set header if page is full */
@@ -332,6 +387,7 @@ void MemoryManager::syncRecords() {
 		bytes += sizeof(char);
 
 		for (auto record : page.second){
+
 			*((rKey_t*)bytes) = record->m_id;
 			bytes += sizeof(rKey_t);
 			*((double*)bytes) = record->m_height;
@@ -345,9 +401,7 @@ void MemoryManager::syncRecords() {
 
 		file.write(bytesStart, RECORD_PAGE_SIZE);
 	}
-
 	file.close();
-	delete[] bytesStart;
 }
 
 void MemoryManager::getBlock(position_t position){
@@ -367,6 +421,7 @@ void MemoryManager::getBlock(position_t position){
 	}
 
 	m_pagesInMemory++;
+	recordReads++;
 
 	/* Load the block from records file */
 	char* bytesStart = new char[RECORD_PAGE_SIZE]();
@@ -399,6 +454,8 @@ void MemoryManager::getBlock(position_t position){
 			rPtr->m_radius = r.m_radius;
 
 			m_allocatedRecords[position].push_back(rPtr);
+			m_allocatedRecordsCopy[position].push_back(*rPtr);
+
 		}
 	}
 
@@ -409,56 +466,79 @@ void MemoryManager::getBlock(position_t position){
 }
 
 void MemoryManager::deallocateBlock(position_t position) {
-	fstream file(m_recordsFile, ios::out|ios::binary|ios::in);
+	bool changed = false;
 
-	/* File cannot be opened */
-	if (!file.good()){
-		cerr << "File cannot be opened: " << m_recordsFile << endl;
-		return;
+	auto pageCopy = m_allocatedRecordsCopy[position];
+	auto page = m_allocatedRecords[position];
+	auto it1 = pageCopy.begin();
+	auto it2 = page.begin();
+	Record r1, r2;
+
+	for(; it1 != pageCopy.end() && it2 != page.end(); ++it1, ++it2){
+		r1 = (*it1);
+		r2 = *(*it2);
+
+		if (!(r1 == r2)){
+			changed = true;
+			break;
+		}
 	}
 
-	m_pagesInMemory--;
 
-	/* Buffer for page */
-	char* bytesStart = new char[RECORD_PAGE_SIZE]();
-	char* bytes = bytesStart;
+	if (changed){
+		fstream file(m_recordsFile, ios::out|ios::binary|ios::in);
 
-	/* Update each page */
-	bytes = bytesStart;
-
-	/* Set header if page is full */
-	if (m_allocatedRecords[position].size() >= RECORDS_PER_PAGE){
-		*((char*)bytes) = 1U;
-	}
-	bytes += sizeof(char);
-
-	for (auto record : m_allocatedRecords[position]){
-		/* Boundary only for safety and debugging help */
-		if((bytes - bytesStart) >= (unsigned int)RECORD_PAGE_SIZE){
-				cerr << "Page overfilled while deallocating!" << endl;
-				break;
+		/* File cannot be opened */
+		if (!file.good()){
+			cerr << "File cannot be opened: " << m_recordsFile << endl;
+			return;
 		}
 
-		*((rKey_t*)bytes) = record->m_id;
-		bytes += sizeof(rKey_t);
-		*((double*)bytes) = record->m_height;
-		bytes += sizeof(double);
-		*((double*)bytes) = record->m_radius;
-		bytes += sizeof(double);
+		recordWrites++;
+
+		/* Buffer for page */
+		char bytesStart[RECORD_PAGE_SIZE]={};
+		char* bytes = bytesStart;
+
+		/* Update each page */
+		bytes = bytesStart;
+
+		/* Set header if page is full */
+		if (m_allocatedRecords[position].size() >= RECORDS_PER_PAGE){
+			*((char*)bytes) = 1U;
+		}
+		bytes += sizeof(char);
+
+		for (auto record : m_allocatedRecords[position]){
+			/* Boundary only for safety and debugging help */
+			if((bytes - bytesStart) >= (unsigned int)RECORD_PAGE_SIZE){
+					cerr << "Page overfilled while deallocating!" << endl;
+					break;
+			}
+
+			*((rKey_t*)bytes) = record->m_id;
+			bytes += sizeof(rKey_t);
+			*((double*)bytes) = record->m_height;
+			bytes += sizeof(double);
+			*((double*)bytes) = record->m_radius;
+			bytes += sizeof(double);
+		}
+
+		/* Write page */
+		file.seekp(position);
+		file.write(bytesStart, RECORD_PAGE_SIZE);
+
+		file.close();
 	}
 
-	/* Write page */
-	file.seekp(position);
-	file.write(bytesStart, RECORD_PAGE_SIZE);
-
 	/* Free memory */
+	m_pagesInMemory--;
+
 	for (auto record : m_allocatedRecords[position]){
 		delete record;
 	}
 
-	delete[] bytesStart;
 
-	file.close();
 }
 
 void MemoryManager::printRecords() {
@@ -493,6 +573,9 @@ void MemoryManager::saveState() {
 	/* Write location of block with space for records */
 	file.write((char*)&m_freeBlock, sizeof(m_freeBlock));
 
+	/* Write location of root node block */
+	file.write((char*)&m_rootNodePosition, sizeof(m_rootNodePosition));
+
 	file.close();
 }
 
@@ -502,11 +585,17 @@ void MemoryManager::loadState() {
 	/* No previous state */
 	if (!file.good()){
 		cerr << "No previous state file found" << endl;
+
+		/* Create empty node to not use position 0 */
+		newNode();
+
 		return;
 	}
 
 	/* Read data */
 	file.read((char*)&m_freeBlock, sizeof(m_freeBlock));
+
+	file.read((char*)&m_rootNodePosition, sizeof(m_rootNodePosition));
 
 	file.close();
 }
@@ -515,6 +604,7 @@ void MemoryManager::deleteRecord(position_t position, rKey_t key) {
 	/* Get block with record */
 	getBlock(position);
 
+	auto itCopy = m_allocatedRecordsCopy[position].begin();
 	for (auto record = m_allocatedRecords[position].begin();
 			record != m_allocatedRecords[position].end();
 			record++){
@@ -522,13 +612,22 @@ void MemoryManager::deleteRecord(position_t position, rKey_t key) {
 		if ((*record)->m_id == key){
 			delete (*record);
 			record = m_allocatedRecords[position].erase(record);
+
+			m_allocatedRecordsCopy[position].erase(itCopy);
 			break;
 		}
+
+		itCopy++;
 	}
 }
 
 void MemoryManager::updateNodeStats(position_t position) {
+	if (m_globalSid + 1 < m_globalSid){
+		cout << "Global SID overflow!" << endl;
+	}
+
 	m_globalSid++;
+
 	m_allocatedNodesSid[position] = m_globalSid;
 }
 
@@ -541,8 +640,7 @@ void MemoryManager::maintance() {
 	position_t toDeallocate = 0;
 	sequenceID_t min = ~0;
 
-	/* TODO: make m_memoryLimit -1) ? */
-	if (m_pagesInMemory > m_memoryLimit){
+	if (m_pagesInMemory > (m_memoryLimit)){
 
 		/* Look for least recently used page */
 		for (auto page : m_allocatedRecordsSid){
@@ -555,16 +653,22 @@ void MemoryManager::maintance() {
 		}
 
 		deallocateBlock(toDeallocate);
-		cout << "maintance removed page: " << toDeallocate<<endl;
+		if (DEBUG){
+			cout << "Maintance removed page: " << toDeallocate << endl;
+			cout << "Pages in memory: " << m_pagesInMemory<< endl;
+			cout << "Nodes in memory: " << m_nodesInMemory<< endl << endl;
+
+		}
 
 		/* Update maps */
 		m_allocatedRecords.erase(toDeallocate);
+		m_allocatedRecordsCopy.erase(toDeallocate);
 		m_allocatedRecordsSid.erase(toDeallocate);
 	}
 
 	min = ~0;
 
-	if (m_nodesInMemory > m_memoryLimit){
+	if (m_nodesInMemory > (m_memoryLimit)){
 
 		/* Look for least recently used node */
 		for (auto node : m_allocatedNodesSid){
@@ -575,11 +679,13 @@ void MemoryManager::maintance() {
 		}
 
 		deallocateNode(getNode(toDeallocate));
-		cout << "maintance removed node: " << toDeallocate<<endl;
+		if (DEBUG)
+			cout << "Maintance removed node: " << toDeallocate<<endl;
 
 		/* Update maps */
 		m_allocatedNodes.erase(toDeallocate);
 		m_allocatedNodesSid.erase(toDeallocate);
+		m_allocatedNodesCopy.erase(toDeallocate);
 	}
 
 }

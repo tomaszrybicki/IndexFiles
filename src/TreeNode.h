@@ -22,12 +22,20 @@ public:
 	TreeNode();
 	virtual ~TreeNode();
 
-	/* Prints contents of the node */
-	void print();
+	/* Prints contents of the node and its children
+	 * vertical sets output for first child
+	 *
+	 * Aligning works for 2 digit keys properly
+	 * change PRINT_WIDTH to increase */
+	void print(bool vertical, int indent);
 
-	list<position_t> getPointers();
+	void printIndex();
 
-	list<treeRecord> getTreeRecords();
+	void printRecords();
+
+	list<position_t> &getPointers();
+
+	list<treeRecord> &getTreeRecords();
 
 	/* Inserts record into index file and record file
 	 * Node is then sorted */
@@ -44,12 +52,12 @@ public:
 		return m_position;
 	}
 
-private:
-	/* Sorts the node's element by key
-	 * Leaves node pointers in original place */
-	void sort();
+	bool operator==(const TreeNode& other) const;
 
-private:
+//private:
+
+
+//private:
 	list<treeRecord> m_treeRecords;
 	list<position_t> m_nodePointers;
 	position_t m_parentPosition;

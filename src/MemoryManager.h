@@ -48,11 +48,11 @@ public:
 	 * loads it into memory and returns it's address */
 	TreeNode* newNode();
 
+
 	/* Creates a new record in file, loads it into memory
 	 * and returns the pointer, position is filled with record position
 	 * Caller has to set id for the record before it's deallocated */
 	Record* newRecord(position_t* position);
-
 
 	/* Updates file to memory contents */
 	void syncRecords();
@@ -87,11 +87,22 @@ public:
 	/* Updates statistics about page usage, increments globalSid */
 	void updatePageStats(position_t position);
 
-	/* Checks if there isnt too many nodes or records in memory and
+	/* Checks if there aren't too many nodes or records in memory and
 	 * removes the ones last used from memory if needed
 	 */
 	void maintance();
 
+	/* Makes sure all nodes to the root are in memory */
+	void updatePathToRoot(position_t node);
+
+
+	position_t getRootNodePosition() const {
+		return m_rootNodePosition;
+	}
+
+	void setRootNodePosition(position_t rootNodePosition) {
+		m_rootNodePosition = rootNodePosition;
+	}
 
 private:
 	/* File holding all the trees nodes */
@@ -109,11 +120,17 @@ private:
 	/* Map of nodes loaded in memory */
 	map<position_t, TreeNode*> m_allocatedNodes;
 
+	/* Map of copies of nodes loaded in memory */
+	map<position_t, TreeNode> m_allocatedNodesCopy;
+
 	/* Map of sequence ids of nodes loaded in memory */
 	map<position_t, sequenceID_t> m_allocatedNodesSid;
 
 	/* Map of record pages loaded in memory */
 	map<position_t, list<Record*>> m_allocatedRecords;
+
+	/* Map of copies of record pages loaded in memory */
+	map<position_t, list<Record>> m_allocatedRecordsCopy;
 
 	/* Map of record pages loaded in memory sequence ids*/
 	map<position_t, sequenceID_t> m_allocatedRecordsSid;
@@ -131,6 +148,11 @@ private:
 	int m_nodesInMemory;
 
 	sequenceID_t m_globalSid;
+
+	/* Position of root node to be saved for database closing */
+	position_t m_rootNodePosition;
 };
+
+
 
 #endif /* SRC_MEMORYMANAGER_H_ */
