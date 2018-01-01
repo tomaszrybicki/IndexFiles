@@ -21,6 +21,7 @@ extern uint64_t indexReads;
 extern uint64_t indexWrites;
 BTree::BTree(int degree)
 	: m_degree(degree)
+	, m_printInfo(1)
 {
 	position_t rootPos = manager.getRootNodePosition();
 
@@ -187,30 +188,17 @@ void BTree::split(position_t nodePos) {
 	parent->m_treeRecords.sort(compareRecord);
 	parent->m_nodePointers.sort(compareNode);
 
-	//position_t parentPos = parent->m_position;
-
 	/* Parent overflow */
 	if (parent->countRecords() > 2 * DEGREE){
 
-//		print();
-//		parent = manager.getNode(parentPos);
-
 		/* Attempt compensation */
 		if (!compensate(parent->m_position)){
-
-//			print();
-//			parent = manager.getNode(parentPos);
 
 			/* Split parent if necessary */
 			split(parent->m_position);
 		}
 
-//		print();
-//		parent = manager.getNode(parentPos);
 	}
-
-
-
 
 }
 
@@ -539,6 +527,10 @@ void BTree::removeRecord(rKey_t key) {
 			}
 		}
 		updatedNode->m_treeRecords.remove(toRemove);
+		Record* rm = manager.getRecord(toRemove.position, toRemove.key);
+		rm->setId(0);
+		rm->setHeight(0);
+		rm->setRadius(0);
 
 		/* See if leaf still has at least m_degree children */
 		TreeNode* underflowed = updatedNode;
@@ -840,8 +832,6 @@ void BTree::merge(position_t nodePos) {
 	/* Remove old node */
 	underflowed->m_nodePointers.clear();
 	underflowed->m_treeRecords.clear();
-	underflowed->m_parentPosition = 0;
-	underflowed->m_position = 0;
 
 	/* Add all to merged node */
 	recordBuffer.push_back(record);
@@ -865,8 +855,6 @@ void BTree::updateRecord(rKey_t key, double h, double r, rKey_t newKey) {
 		if (r){
 			record->setRadius(r);
 		}
-
-		return;
 
 	/* Change records key */
 	}else{
@@ -896,9 +884,13 @@ void BTree::updateRecord(rKey_t key, double h, double r, rKey_t newKey) {
 
 		insert(*record, pos);
 	}
-	cout << "Record reads: " << recordReads << " Record writes: "<< recordWrites << endl;
-	cout << "Index reads: " << indexReads << " Index writes: "<< indexWrites << endl;
-	cout << "Total reads: " << recordReads + indexReads << " Total writes: " << indexWrites + recordWrites << endl;
+
+	if (m_printInfo){
+		cout << "[Reads] record: " << recordReads << " Index reads: "<< indexReads << " total: " << recordReads + indexReads << endl;
+		cout << "[Writes] record:" << recordWrites << " index: "<< indexWrites << " total: " << recordWrites + indexWrites << endl;
+	}
+
+	return;
 
 }
 
@@ -981,7 +973,6 @@ void BTree::runTestFile() {
 
 	char type;
 	rKey_t key = 0;
-	rKey_t newKey = 0;
 	double height, radius;
 
 	while(file.tellg() < end){
@@ -989,26 +980,42 @@ void BTree::runTestFile() {
 		file.read((char*)&key, 8);
 		file.read((char*)&height, 8);
 		file.read((char*)&radius, 8);
-		file.read((char*)&newKey, 8);
 
 
 		switch (type){
 		case 'I':
 			cout << "inserting key: " << key << endl;
-			insert(height, radius, key);
+			insertWrapper(height, radius, key);
 			break;
 
 		case 'U':
-			updateRecord(key, height, radius, newKey);
+			updateRecord(key, height, radius, 0);
+			break;
+
+		case 'R':
+			removeRecordWrapper(key);
+			break;
+
+		case 'F':
+			getRecordWrapper(key);
+			break;
+
+		case 'C':
+			recordReads = 0;
+			recordWrites = 0;
+			indexReads = 0;
+			indexWrites = 0;
 			break;
 
 		case 'P':
 			print();
-			printIndexes();
-			printRecords();
-			cout << "Record reads: " << recordReads << " Record writes: "<< recordWrites << endl;
-			cout << "Index reads: " << indexReads << " Index writes: "<< indexWrites << endl;
-			cout << "Total reads: " << recordReads + indexReads << " Total writes: " << indexWrites + recordWrites << endl;
+			//printIndexes();
+			//printRecords();
+
+			if (m_printInfo){
+				cout << "[Reads] record: " << recordReads << " Index reads: "<< indexReads << " total: " << recordReads + indexReads << endl;
+				cout << "[Writes] record:" << recordWrites << " index: "<< indexWrites << " total: " << recordWrites + indexWrites << endl;
+			}
 			break;
 
 		}
@@ -1028,11 +1035,12 @@ void BTree::createTestFile() {
 
 	char type = 'I';
 	rKey_t key = 0;
-	rKey_t newKey = 0;
 	double height, radius;
+	int a = 1024;
+	int b = 2*a;
 
 	/* Inserts */
-	for (int i = 1; i < 50; i++){
+	for (int i = 1; i <= a; i++){
 		/* Write type of operation */
 		type = 'I';
 		file.write(&type, 1);
@@ -1046,50 +1054,88 @@ void BTree::createTestFile() {
 		radius = i + 1;
 		file.write((char*)&height, 8);
 		file.write((char*)&radius, 8);
-
-		/* Fill rest with zeros */
-		newKey = 0;
-		file.write((char*)&newKey, 8);
 	}
 
-	/* Print */
-	type = 'P';
-	key = 0;
-	file.write(&type, 1);
-	file.write((char*)&key, 8);
-	file.write((char*)&key, 8);
-	file.write((char*)&key, 8);
-	file.write((char*)&key, 8);
+//	/* Write type of operation - clean io stats */
+//	type = 'C';
+//	file.write(&type, 1);
+//	key = 0;
+//	file.write((char*)&key, 8);
+//	height = 0;
+//	radius = 0;
+//	file.write((char*)&height, 8);
+//	file.write((char*)&radius, 8);
+//
+//
+//	/* Removes */
+//	for (int i = 1; i <= a; i++){
+//		/* Write type of operation */
+//		type = 'R';
+//		file.write(&type, 1);
+//
+//		/* Write key to update */
+//		key = i;
+//		file.write((char*)&key, 8);
+//
+//		/* Write height and radius */
+//		height = 0;
+//		radius = 0;
+//		file.write((char*)&height, 8);
+//		file.write((char*)&radius, 8);
+//
+//	}
+//
+//	/* Print */
+//	type = 'P';
+//	key = 0;
+//	file.write(&type, 1);
+//	file.write((char*)&key, 8);
+//	file.write((char*)&key, 8);
+//	file.write((char*)&key, 8);
+//
+//	/* Updates */
+//	for (int i = 1; i < a; i++){
+//		/* Write type of operation */
+//		type = 'U';
+//		file.write(&type, 1);
+//
+//		/* Write key to update */
+//		key = i;
+//		file.write((char*)&key, 8);
+//
+//		/* Write height and radius - 0 = dont change*/
+//		height = 11;
+//		radius = 11;
+//		file.write((char*)&height, 8);
+//		file.write((char*)&radius, 8);
+//
+//	}
+//
+//	/* Print */
+//	type = 'P';
+//	key = 0;
+//	file.write(&type, 1);
+//	file.write((char*)&key, 8);
+//	file.write((char*)&key, 8);
+//	file.write((char*)&key, 8);
 
-	/* Updates */
-	for (int i = 1; i < 50; i++){
+	/* Fetch */
+	for (int i = 1; i < a; i++){
 		/* Write type of operation */
-		type = 'U';
+		type = 'F';
 		file.write(&type, 1);
 
-		/* Write key to update */
+		/* Write key to fetch */
 		key = i;
 		file.write((char*)&key, 8);
 
-		/* Write height and radius - 0 = dont change*/
-		height = 11;
-		radius = 11;
+		height = 0;
+		radius = 0;
 		file.write((char*)&height, 8);
 		file.write((char*)&radius, 8);
 
-		/* Set new key */
-		newKey = 0;
-		file.write((char*)&newKey, 8);
 	}
 
-	/* Print */
-	type = 'P';
-	key = 0;
-	file.write(&type, 1);
-	file.write((char*)&key, 8);
-	file.write((char*)&key, 8);
-	file.write((char*)&key, 8);
-	file.write((char*)&key, 8);
 
 
 	file.close();
@@ -1101,9 +1147,10 @@ void BTree::removeRecordWrapper(rKey_t key) {
 
 	removeRecord(key);
 
-	cout << "Record reads: " << recordReads << " Record writes: "<< recordWrites << endl;
-	cout << "Index reads: " << indexReads << " Index writes: "<< indexWrites << endl;
-	cout << "Total reads: " << recordReads + indexReads << " Total writes: " << indexWrites + recordWrites << endl;
+	if (m_printInfo){
+		cout << "[Reads] record: " << recordReads << " Index reads: "<< indexReads << " total: " << recordReads + indexReads << endl;
+		cout << "[Writes] record:" << recordWrites << " index: "<< indexWrites << " total: " << recordWrites + indexWrites << endl;
+	}
 }
 
 bool BTree::insertWrapper(double h, double r, rKey_t key) {
@@ -1111,10 +1158,10 @@ bool BTree::insertWrapper(double h, double r, rKey_t key) {
 
 	bool result = insert(h,r,key);
 
-	cout << "Record reads: " << recordReads << " Record writes: "<< recordWrites << endl;
-	cout << "Index reads: " << indexReads << " Index writes: "<< indexWrites << endl;
-	cout << "Total reads: " << recordReads + indexReads << " Total writes: " << indexWrites + recordWrites << endl;
-
+	if (m_printInfo){
+		cout << "[Reads] record: " << recordReads << " Index reads: "<< indexReads << " total: " << recordReads + indexReads << endl;
+		cout << "[Writes] record:" << recordWrites << " index: "<< indexWrites << " total: " << recordWrites + indexWrites << endl;
+	}
 	return result;
 }
 
@@ -1123,10 +1170,10 @@ Record* BTree::getRecordWrapper(rKey_t key) {
 
 	Record* result = getRecord(key);
 
-	cout << "Record reads: " << recordReads << " Record writes: "<< recordWrites << endl;
-	cout << "Index reads: " << indexReads << " Index writes: "<< indexWrites << endl;
-	cout << "Total reads: " << recordReads + indexReads << " Total writes: " << indexWrites + recordWrites << endl;
-
+	if (m_printInfo){
+		cout << "[Reads] record: " << recordReads << " Index reads: "<< indexReads << " total: " << recordReads + indexReads << endl;
+		cout << "[Writes] record:" << recordWrites << " index: "<< indexWrites << " total: " << recordWrites + indexWrites << endl;
+	}
 	return result;
 }
 
@@ -1185,7 +1232,9 @@ void BTree::interfaceFetch() {
 		}
 		key = stoull(input.c_str());
 
-		getRecordWrapper(key);
+		Record* record = getRecordWrapper(key);
+		cout << "Fetched record: key: " << key << " height: " << record->getHeight();
+		cout << " radius: " << record->getRadius() << endl;
 
 	}
 	while( !cin.fail() );

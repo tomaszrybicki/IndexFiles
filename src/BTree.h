@@ -62,22 +62,20 @@ public:
 	/* Saves position of root node */
 	void saveState();
 
-	void interface();
-
-	void printMenu();
-
 	/* Test files are binary files where each operation is in following format:
 	 * Offset
 	 * 0x00 - type of operation (Update, Remove, Insert, Fetch, Print)
 	 * 0x01 - key of the record
 	 * 0x09 - new height (only for update and insert) - double format
 	 * 0x11 - new radius (only for update and insert) - double format
-	 * 0x19-0x20 - new key (only for update)
-	 *
 	 */
 	void runTestFile();
 
 	void createTestFile();
+
+	void interface();
+
+	void printMenu();
 
 	void interfaceInsert();
 
@@ -87,8 +85,6 @@ public:
 
 	void interfaceRemove();
 
-
-//private:
 	/* Returns a node which contains or to which
 	 *  a key should be inserted */
 	position_t findLeafNodeForKey(unsigned long long key);
@@ -100,14 +96,14 @@ public:
 	void findNeighbourNodes(position_t nodePos, position_t &left, position_t &right);
 
 
-//private:
+private:
 	/* The degree of B-tree */
 	int m_degree;
-
 
 	/* The root node of the tree */
 	position_t m_root;
 
+	/* Extended information printing */
 	bool m_printInfo;
 };
 

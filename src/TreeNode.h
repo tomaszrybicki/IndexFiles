@@ -54,10 +54,7 @@ public:
 
 	bool operator==(const TreeNode& other) const;
 
-//private:
 
-
-//private:
 	list<treeRecord> m_treeRecords;
 	list<position_t> m_nodePointers;
 	position_t m_parentPosition;

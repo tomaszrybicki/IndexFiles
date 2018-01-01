@@ -103,6 +103,10 @@ MemoryManager::~MemoryManager() {
 	m_allocatedNodes.clear();
 	m_allocatedNodesCopy.clear();
 
+	cout << endl << "End statistics:" << endl;
+	cout << "[Reads] record: " << recordReads << " Index reads: "<< indexReads << " total: " << recordReads + indexReads << endl;
+	cout << "[Writes] record:" << recordWrites << " index: "<< indexWrites << " total: " << recordWrites + indexWrites << endl;
+
 	saveState();
 }
 
@@ -183,7 +187,6 @@ TreeNode* MemoryManager::getNode(position_t nodePosition) {
 }
 
 void MemoryManager::deallocateNode(TreeNode* node) {
-
 	/* If node was changed */
 	if (!(m_allocatedNodesCopy[node->m_position] == (*node))){
 
@@ -245,7 +248,6 @@ void MemoryManager::deallocateNode(TreeNode* node) {
 
 	/* Free node */
 	if(node){
-		delete node;
 		node = 0;
 	}
 }
@@ -476,10 +478,6 @@ void MemoryManager::getBlock(position_t position){
 
 void MemoryManager::deallocateBlock(position_t position) {
 	bool changed = false;
-
-	if (position == 0){
-		cout <<"h";
-	}
 
 	auto pageCopy = m_allocatedRecordsCopy[position];
 	auto page = m_allocatedRecords[position];

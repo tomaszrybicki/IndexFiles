@@ -16,7 +16,7 @@
 
 #define DEBUG 0
 #define DEGREE 1
-#define BUFFER_SIZE 10
+#define BUFFER_SIZE 50
 #define DIGIT_ALIGN 2
 #define	PRINT_WIDTH (DIGIT_ALIGN*2*DEGREE + 2*DEGREE + 1 + 4*DEGREE + 2 + 1 + 9*DEBUG)
 #define MAX_RADIUS 10
