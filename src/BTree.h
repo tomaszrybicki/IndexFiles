@@ -27,11 +27,15 @@ public:
 
 	bool insert(double h, double r, rKey_t key);
 
+	bool insertWrapper(double h, double r, rKey_t key);
+
 	/* Attempts compensation, returns true if possible and done */
 	bool compensate(position_t node);
 
 	/* Removed record with key */
 	void removeRecord(rKey_t key);
+
+	void removeRecordWrapper(rKey_t key);
 
 	/* Pass 0 as any argument except key to not change its value */
 	void updateRecord(rKey_t key, double h, double r, rKey_t newKey);
@@ -50,6 +54,8 @@ public:
 
 	Record* getRecord(rKey_t key);
 
+	Record* getRecordWrapper(rKey_t key);
+
 	/* The manager responsible for file access layer */
 	static MemoryManager manager;
 
@@ -58,9 +64,11 @@ public:
 
 	void interface();
 
+	void printMenu();
+
 	/* Test files are binary files where each operation is in following format:
 	 * Offset
-	 * 0x00 - type of operation (Update, Remove, Insert, Get, Print)
+	 * 0x00 - type of operation (Update, Remove, Insert, Fetch, Print)
 	 * 0x01 - key of the record
 	 * 0x09 - new height (only for update and insert) - double format
 	 * 0x11 - new radius (only for update and insert) - double format
@@ -71,6 +79,13 @@ public:
 
 	void createTestFile();
 
+	void interfaceInsert();
+
+	void interfaceFetch();
+
+	void interfaceUpdate();
+
+	void interfaceRemove();
 
 
 //private:
@@ -92,6 +107,8 @@ public:
 
 	/* The root node of the tree */
 	position_t m_root;
+
+	bool m_printInfo;
 };
 
 #endif /* BTREE_H_ */

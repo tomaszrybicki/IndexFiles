@@ -15,6 +15,10 @@ using namespace std;
 
 MemoryManager BTree::manager(DEGREE, BUFFER_SIZE);
 
+extern uint64_t recordReads;
+extern uint64_t recordWrites;
+extern uint64_t indexReads;
+extern uint64_t indexWrites;
 BTree::BTree(int degree)
 	: m_degree(degree)
 {
@@ -54,8 +58,9 @@ static bool compareNode(const position_t &a, const position_t &b)
 
 bool BTree::insert(Record record, position_t recordPos) {
 	/* Check if exists */
-	if (findKey(record.getID()) != ERROR){
-		cout << "Error inserting record: key already exists" << endl;
+	position_t tmp = findKey(record.getID());
+	if (tmp != ERROR){
+		cout << "Error inserting record: key already exists " << endl;
 		return false;
 	}
 
@@ -92,6 +97,11 @@ bool BTree::insert(Record record, position_t recordPos) {
 
 void BTree::print() {
 	cout << "BTree structure: " << endl;
+	if(m_root == ERROR){
+		cout << "Tree is empty!" << endl;
+		return;
+	}
+
 	TreeNode* node = manager.getNode(m_root);
 	node->print(true, 0);
 	cout << endl;
@@ -177,16 +187,29 @@ void BTree::split(position_t nodePos) {
 	parent->m_treeRecords.sort(compareRecord);
 	parent->m_nodePointers.sort(compareNode);
 
+	//position_t parentPos = parent->m_position;
+
 	/* Parent overflow */
 	if (parent->countRecords() > 2 * DEGREE){
+
+//		print();
+//		parent = manager.getNode(parentPos);
 
 		/* Attempt compensation */
 		if (!compensate(parent->m_position)){
 
+//			print();
+//			parent = manager.getNode(parentPos);
+
 			/* Split parent if necessary */
 			split(parent->m_position);
 		}
+
+//		print();
+//		parent = manager.getNode(parentPos);
 	}
+
+
 
 
 }
@@ -321,14 +344,30 @@ bool BTree::compensate(position_t nodePos) {
 		i++;
 	}
 
+	/* If our neigbhour is to the left */
+	position_t firstNodePos;
+	position_t secondNodePos;
+	if (middle == middle1){
+		firstNodePos = compNode->m_position;
+		secondNodePos = compensated->m_position;
+	} else {
+		secondNodePos = compNode->m_position;
+		firstNodePos = compensated->m_position;
+	}
+
 	i = 0;
 	for (auto it = ptrBuffer.begin(); it != ptrBuffer.end(); it++) {
+		/* Update parent pointer */
+		TreeNode* child = manager.getNode((*it));
+
 		/* Write to first page */
 		if (i <= elementCount/2){
 			firstPtrs.push_back((*it));
+			child->m_parentPosition = firstNodePos;
 
 		} else {
 			secondPtrs.push_back((*it));
+			child->m_parentPosition = secondNodePos;
 		}
 		i++;
 	}
@@ -341,9 +380,9 @@ bool BTree::compensate(position_t nodePos) {
 		compensated->m_nodePointers = secondPtrs;
 	} else {
 		compNode->m_treeRecords = secondPage;
-		compNode->m_nodePointers = firstPtrs;
+		compNode->m_nodePointers = secondPtrs;
 		compensated->m_treeRecords = firstPage;
-		compensated->m_nodePointers = secondPtrs;
+		compensated->m_nodePointers = firstPtrs;
 	}
 
 	for (auto &j : parent->m_treeRecords){
@@ -456,6 +495,11 @@ Record* BTree::getRecord(rKey_t key) {
 }
 
 void BTree::printIndexes() {
+	if(m_root == ERROR){
+		cout << "Tree is empty!" << endl;
+		return;
+	}
+
 	TreeNode* node = manager.getNode(m_root);
 	cout << "Index content: " << endl;
 	node->printIndex();
@@ -463,6 +507,11 @@ void BTree::printIndexes() {
 }
 
 void BTree::printRecords() {
+	if(m_root == ERROR){
+		cout << "Tree is empty!" << endl;
+		return;
+	}
+
 	TreeNode* node = manager.getNode(m_root);
 	cout << "Records: " << endl;
 	node->printRecords();
@@ -496,10 +545,16 @@ void BTree::removeRecord(rKey_t key) {
 		position_t parentPos;
 
 		while (underflowed->countRecords() < m_degree){
+			position_t underflowPos = underflowed->m_position;
 
 			/* Root underflow */
 			if (underflowed->m_parentPosition == ERROR){
 				if (underflowed->countRecords() == 0){
+					if (underflowed->m_nodePointers.size() == 0){
+						m_root = ERROR;
+						break;
+					}
+
 					position_t childPos = underflowed->m_nodePointers.front();
 					TreeNode* child = manager.getNode(childPos);
 					child->m_parentPosition = ERROR;
@@ -513,8 +568,11 @@ void BTree::removeRecord(rKey_t key) {
 			/* Attempt compensation */
 			if (!compensate(underflowed->m_position)){
 
+				underflowed = manager.getNode(underflowPos);
+
 				parentPos = underflowed->m_parentPosition;
 				merge(underflowed->m_position);
+
 
 				/* Check for underflow in parent */
 				underflowed = manager.getNode(parentPos);
@@ -554,22 +612,30 @@ void BTree::removeRecord(rKey_t key) {
 
 		/* Remove the node to be removed and insert the biggest node */
 		for (auto &record : updatedNode->m_treeRecords){
-			removed = manager.getRecord(record.position, record.key);
-			record.key = biggest.key;
-			record.position = biggest.position;
+			if (record.key == key){
+				removed = manager.getRecord(record.position, record.key);
+				record.key = biggest.key;
+				record.position = biggest.position;
+
+				break;
+			}
 		}
 
+		position_t tmp = child->m_position;
+
 		/* See if leaf still has at least m_degree children */
-		TreeNode* underflowed = child;
+		TreeNode* underflowed = manager.getNode(tmp);
 		while (underflowed->countRecords() < m_degree && underflowed->m_parentPosition != ERROR){
 
 			/* Attempt compensation */
 			if (!compensate(underflowed->m_position)){
 				merge(underflowed->m_position);
 
+				position_t par = underflowed->m_parentPosition;
 				/* Check for underflow in parent */
-				underflowed = manager.getNode(underflowed->m_parentPosition);
+				underflowed = manager.getNode(par);
 			}
+
 		}
 
 		/* Remove the node from actual records file (set id == 0) */
@@ -648,11 +714,11 @@ void BTree::saveState() {
 position_t BTree::findNodeWithKey(unsigned long long key) {
 	/* If no root - end */
 	if (m_root == ERROR) {
+		cout << "No root in BTree!" << endl;
 		return ERROR;
 	}
 
 	uint32_t i = 0;
-	treeRecord toFind = {key, 0};
 	TreeNode* node;
 	node = manager.getNode(m_root);
 	list<treeRecord> records = node->getTreeRecords();
@@ -661,11 +727,12 @@ position_t BTree::findNodeWithKey(unsigned long long key) {
 
 	while (node != NULL) {
 		/* Look for key in nodes records */
-		auto iter = find(records.begin(), records.end(), toFind);
+		for (auto it : records) {
 
-		/* Found record - return its position */
-		if (iter != records.end()){
-			return node->m_position;
+			/* Found record - return node position */
+			if (it.key == key){
+				return node->m_position;
+			}
 		}
 
 		/* Break when leaf and not found yet */
@@ -787,6 +854,7 @@ void BTree::merge(position_t nodePos) {
 }
 
 void BTree::updateRecord(rKey_t key, double h, double r, rKey_t newKey) {
+	cout << "Updating record with key: " << key << " h: " << h << " r: " << r << endl;
 	if (newKey == 0){
 		Record* record = getRecord(key);
 
@@ -803,9 +871,18 @@ void BTree::updateRecord(rKey_t key, double h, double r, rKey_t newKey) {
 	/* Change records key */
 	}else{
 		position_t pos = findKey(key);
+
+		if (pos == ERROR){
+			cout << "No record with key: " << key << " found." << endl;
+			return;
+		}
+
 		Record* record = manager.getRecord(pos, key);
 
+
 		removeRecord(key);
+
+		record = manager.getRecord(pos, key);
 
 		if (h){
 			record->setHeight(h);
@@ -819,9 +896,74 @@ void BTree::updateRecord(rKey_t key, double h, double r, rKey_t newKey) {
 
 		insert(*record, pos);
 	}
+	cout << "Record reads: " << recordReads << " Record writes: "<< recordWrites << endl;
+	cout << "Index reads: " << indexReads << " Index writes: "<< indexWrites << endl;
+	cout << "Total reads: " << recordReads + indexReads << " Total writes: " << indexWrites + recordWrites << endl;
+
 }
 
 void BTree::interface() {
+	char input = 0;
+
+	while (input != '8'){
+		do
+		{
+			cin.sync();
+			cin.clear();
+			printMenu();
+			cin >> input;
+		}
+		while( !cin.fail() && input!='1' && input!='2' && input!='3' && input!='4' && input!='5' && input!='6' && input!='7'&& input!='8' );
+
+		switch(input){
+		case '1':
+			runTestFile();
+			break;
+
+		case '2':
+			m_printInfo = !m_printInfo;
+			break;
+
+		case '3':
+			interfaceInsert();
+			break;
+
+		case '4':
+			interfaceFetch();
+			break;
+
+		case '5':
+			interfaceUpdate();
+			break;
+
+		case '6':
+			interfaceRemove();
+			break;
+
+		case '7':
+			print();
+			printIndexes();
+			printRecords();
+			break;
+
+		case '8':
+			return;
+
+		}
+	}
+}
+
+void BTree::printMenu() {
+	cout << endl << "Press the key with chosen option: " << endl;
+	cout << "1) Load test file ('Test.bin')" << endl;
+	cout << "2) Toggle printing info after every operation (currently: " << m_printInfo << ")" << endl;
+	cout << "3) Insert record..." << endl;
+	cout << "4) Get record..." << endl;
+	cout << "5) Update record..." << endl;
+	cout << "6) Remove record..." << endl;
+	cout << "7) Print database info" << endl;
+	cout << "8) Exit" << endl;
+	cout << "> ";
 }
 
 void BTree::runTestFile() {
@@ -864,6 +1006,9 @@ void BTree::runTestFile() {
 			print();
 			printIndexes();
 			printRecords();
+			cout << "Record reads: " << recordReads << " Record writes: "<< recordWrites << endl;
+			cout << "Index reads: " << indexReads << " Index writes: "<< indexWrites << endl;
+			cout << "Total reads: " << recordReads + indexReads << " Total writes: " << indexWrites + recordWrites << endl;
 			break;
 
 		}
@@ -887,7 +1032,7 @@ void BTree::createTestFile() {
 	double height, radius;
 
 	/* Inserts */
-	for (int i = 1; i < 100; i++){
+	for (int i = 1; i < 50; i++){
 		/* Write type of operation */
 		type = 'I';
 		file.write(&type, 1);
@@ -917,23 +1062,23 @@ void BTree::createTestFile() {
 	file.write((char*)&key, 8);
 
 	/* Updates */
-	for (int i = 99; i > 0; i--){
+	for (int i = 1; i < 50; i++){
 		/* Write type of operation */
 		type = 'U';
 		file.write(&type, 1);
 
 		/* Write key to update */
-		key = 100 - i;
+		key = i;
 		file.write((char*)&key, 8);
 
 		/* Write height and radius - 0 = dont change*/
-		height = 0;
-		radius = 0;
+		height = 11;
+		radius = 11;
 		file.write((char*)&height, 8);
 		file.write((char*)&radius, 8);
 
 		/* Set new key */
-		newKey = i;
+		newKey = 0;
 		file.write((char*)&newKey, 8);
 	}
 
@@ -946,8 +1091,168 @@ void BTree::createTestFile() {
 	file.write((char*)&key, 8);
 	file.write((char*)&key, 8);
 
+
 	file.close();
 
+}
+
+void BTree::removeRecordWrapper(rKey_t key) {
+	cout << "Removing record with key: " << key << endl;
+
+	removeRecord(key);
+
+	cout << "Record reads: " << recordReads << " Record writes: "<< recordWrites << endl;
+	cout << "Index reads: " << indexReads << " Index writes: "<< indexWrites << endl;
+	cout << "Total reads: " << recordReads + indexReads << " Total writes: " << indexWrites + recordWrites << endl;
+}
+
+bool BTree::insertWrapper(double h, double r, rKey_t key) {
+	cout << "Inserting record with key: " << key << endl;
+
+	bool result = insert(h,r,key);
+
+	cout << "Record reads: " << recordReads << " Record writes: "<< recordWrites << endl;
+	cout << "Index reads: " << indexReads << " Index writes: "<< indexWrites << endl;
+	cout << "Total reads: " << recordReads + indexReads << " Total writes: " << indexWrites + recordWrites << endl;
+
+	return result;
+}
+
+Record* BTree::getRecordWrapper(rKey_t key) {
+	cout << "Fetching record with key: " << key << endl;
+
+	Record* result = getRecord(key);
+
+	cout << "Record reads: " << recordReads << " Record writes: "<< recordWrites << endl;
+	cout << "Index reads: " << indexReads << " Index writes: "<< indexWrites << endl;
+	cout << "Total reads: " << recordReads + indexReads << " Total writes: " << indexWrites + recordWrites << endl;
+
+	return result;
+}
+
+void BTree::interfaceInsert() {
+	std::string input;
+	double radius, height;
+	rKey_t key;
+
+	do
+	{
+		cin.sync();
+		cin.clear();
+		cout << endl << "Enter record radius ('Q' to quit): ";
+		cin >> input;
+		if(input == "Q"){
+			break;
+		}
+		radius = atof(input.c_str());
+
+		cout << "Enter record height ('Q' to quit): ";
+		if(input == "Q"){
+			break;
+		}
+		cin >> input;
+		height = atof(input.c_str());
+
+		cout << "Enter record key ('Q' to quit): ";
+		if(input == "Q"){
+			break;
+		}
+		cin >> input;
+		key = stoull(input.c_str());
+
+
+
+		/* Insert record */
+		insertWrapper(height, radius, key);
+
+	}
+	while( !cin.fail() );
+
+}
+
+void BTree::interfaceFetch() {
+	std::string input;
+	rKey_t key;
+
+	do
+	{
+		cin.sync();
+		cin.clear();
+		cout << endl << "Enter record key ('Q' to quit): ";
+		cin >> input;
+		if(input == "Q"){
+			break;
+		}
+		key = stoull(input.c_str());
+
+		getRecordWrapper(key);
+
+	}
+	while( !cin.fail() );
+}
+
+void BTree::interfaceUpdate() {
+	std::string input;
+	double radius, height;
+	rKey_t key;
+
+	do
+	{
+
+		cin.sync();
+		cin.clear();
+
+		cout << "Enter record key ('Q' to quit): ";
+		if(input == "Q"){
+			break;
+		}
+		cin >> input;
+		key = stoull(input.c_str());
+
+		cout << endl << "Enter record's new radius ('Q' to quit): ";
+		cin >> input;
+		if(input == "Q"){
+			break;
+		}
+		radius = atof(input.c_str());
+
+		cout << "Enter record's new height ('Q' to quit): ";
+		if(input == "Q"){
+			break;
+		}
+		cin >> input;
+		height = atof(input.c_str());
+
+
+
+
+
+		/* Update record */
+		updateRecord(key, height, radius, 0);
+
+	}
+	while( !cin.fail() );
+}
+
+void BTree::interfaceRemove() {
+	std::string input;
+	rKey_t key;
+
+	do
+	{
+		cin.sync();
+		cin.clear();
+		cout << endl << "Enter record's key ('Q' to quit): ";
+		cin >> input;
+		if(input == "Q"){
+			break;
+		}
+		key = stoull(input.c_str());
+
+		removeRecordWrapper(key);
+
+	}
+	while( !cin.fail() );
 }
 
 void BTree::findNeighbourNodes(position_t nodePos,
@@ -982,7 +1287,10 @@ void BTree::findNeighbourNodes(position_t nodePos,
 			}
 
 			/* Save rightmost neighbour position */
-			advance(it, 2);
+			if (i)
+				advance(it, 2);
+			else
+				advance(it, 1);
 
 			if (it != parent->m_nodePointers.end())
 				right = (*it);

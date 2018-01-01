@@ -95,7 +95,8 @@ MemoryManager::~MemoryManager() {
 
 
 	for (auto it = m_allocatedNodes.begin(); it != m_allocatedNodes.end();){
-		deallocateNode(it->second);
+		if (it->second)
+			deallocateNode(it->second);
 		it++;
 	}
 
@@ -233,12 +234,9 @@ void MemoryManager::deallocateNode(TreeNode* node) {
 	m_nodesInMemory--;
 
 
-	/* Update allocation map */
-	map<position_t, TreeNode*>::iterator it;
-	it = m_allocatedNodes.find(node->m_position);
-	if(it != m_allocatedNodes.end()){
-		m_allocatedNodes.erase(it);
-	}
+	/* Update allocation mapS */
+
+	m_allocatedNodes.erase(node->m_position);
 
 	m_allocatedNodesCopy.erase(node->m_position);
 
@@ -246,7 +244,10 @@ void MemoryManager::deallocateNode(TreeNode* node) {
 	m_allocatedNodesSid.erase(node->m_position);
 
 	/* Free node */
-	delete node;
+	if(node){
+		delete node;
+		node = 0;
+	}
 }
 
 TreeNode* MemoryManager::newNode() {
@@ -331,6 +332,10 @@ Record* MemoryManager::newRecord(position_t* position) {
 	/* Add record to page */
 	m_allocatedRecords[m_freeBlock].push_back(record);
 	m_allocatedRecordsCopy[m_freeBlock].push_back(*record);
+
+	if(m_allocatedRecords[m_freeBlock].size()>2){
+		cout << "Overfilled page!" << endl;
+	}
 
 	(*position) = m_freeBlock;
 
@@ -453,7 +458,11 @@ void MemoryManager::getBlock(position_t position){
 			rPtr->m_height = r.m_height;
 			rPtr->m_radius = r.m_radius;
 
+
 			m_allocatedRecords[position].push_back(rPtr);
+			if(m_allocatedRecords[position].size()>2){
+				cout << "Overfilled page!" << endl;
+			}
 			m_allocatedRecordsCopy[position].push_back(*rPtr);
 
 		}
@@ -467,6 +476,10 @@ void MemoryManager::getBlock(position_t position){
 
 void MemoryManager::deallocateBlock(position_t position) {
 	bool changed = false;
+
+	if (position == 0){
+		cout <<"h";
+	}
 
 	auto pageCopy = m_allocatedRecordsCopy[position];
 	auto page = m_allocatedRecords[position];
@@ -653,7 +666,7 @@ void MemoryManager::maintance() {
 		}
 
 		deallocateBlock(toDeallocate);
-		if (DEBUG){
+		if (DEBUG == 2){
 			cout << "Maintance removed page: " << toDeallocate << endl;
 			cout << "Pages in memory: " << m_pagesInMemory<< endl;
 			cout << "Nodes in memory: " << m_nodesInMemory<< endl << endl;
@@ -679,13 +692,14 @@ void MemoryManager::maintance() {
 		}
 
 		deallocateNode(getNode(toDeallocate));
-		if (DEBUG)
+		if (DEBUG == 2){
 			cout << "Maintance removed node: " << toDeallocate<<endl;
+		}
 
 		/* Update maps */
-		m_allocatedNodes.erase(toDeallocate);
-		m_allocatedNodesSid.erase(toDeallocate);
-		m_allocatedNodesCopy.erase(toDeallocate);
+//		m_allocatedNodes.erase(toDeallocate);
+//		m_allocatedNodesSid.erase(toDeallocate);
+//		m_allocatedNodesCopy.erase(toDeallocate);
 	}
 
 }

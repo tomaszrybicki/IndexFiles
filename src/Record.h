@@ -53,7 +53,16 @@ public:
 
 
 	bool operator==(const Record& other) const {
-		return m_id == other.m_id;
+		if (m_id != other.m_id)
+			return false;
+
+		if (m_height != other.m_height)
+			return false;
+
+		if (m_radius != other.m_radius)
+			return false;
+
+		return true;
 	}
 
 private:

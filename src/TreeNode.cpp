@@ -58,7 +58,11 @@ void TreeNode::print(bool vertical, int indent) {
 		cout << it.key;
 		numberWidth += getDigits(it.key);
 	}
-	cout << "|\u2022]";//<<m_position<<"("<<m_parentPosition<<")";
+	cout << "|\u2022]";
+
+	if (DEBUG){
+		cout << m_position<< "(" << m_parentPosition << ")";
+	}
 
 	int align = PRINT_WIDTH - (2 + 3*m_treeRecords.size() + 1 + numberWidth);
 	for (int i = 0; i < align; i++){
@@ -78,6 +82,12 @@ void TreeNode::print(bool vertical, int indent) {
 
 		if ((*child) == ERROR)
 			continue;
+
+		/* Debug */
+//		TreeNode* tmp = BTree::manager.getNode((*child));
+//		if(tmp->m_parentPosition != m_position){
+//			cout << "HERE!" <<endl;
+//		}
 
 		node = BTree::manager.getNode((*child));
 
@@ -131,7 +141,9 @@ void TreeNode::printIndex() {
 			node->printIndex();
 
 			if (record != m_treeRecords.end()){
-				cout << " Key: " << (*record).key << " \tposition: " << (*record).position << endl;
+				cout << " Key: " << (*record).key
+						<< " \tposition: " << (*record).position
+						<< " \tnode position: " << m_position << endl;
 				record++;
 			}
 
@@ -140,7 +152,9 @@ void TreeNode::printIndex() {
 	/* Leaf */
 	} else {
 		for (auto record : m_treeRecords){
-			cout << " Key: " << record.key << " \tposition: " << record.position << endl;
+			cout << " Key: " << record.key
+					<< " \tposition: " << record.position
+					<< " \tnode position: " << m_position << endl;
 		}
 	}
 
